@@ -1,1 +1,0 @@
-git clone https://github.com/college-of-mary-immaculate/Jenapaul-ther-API
