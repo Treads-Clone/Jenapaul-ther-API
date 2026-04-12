@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>aa</title>
+    <link href="css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root">
+    </div>
+    <script>
+      const API_URL = 'http://localhost:3000';
+      const root = document.getElementById('root');
+      
+      function createAccount() {
+        root.innerHTML = `
+        <form id="signup" enctype="multipart/form-data">
+            <label for="username">Username</label>
+            <input type="text" name="username" id="username" required>
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" required>
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" required>
+            <label for="fullname">Full Name</label>
+            <input type="text" name="fullname" id="fullname" required>
+            <label for="bio">Bio</label>
+            <input type="text" name="bio" id="bio">
+            <label for="profile_img">Profile Image</label>
+            <input type="file" name="profile_img" id="profile_img" accept="image/*" required>
+            <button type="submit">Sign Up</button>
+        </form>
+        `;
+
+        const signUp = document.getElementById('signup');
+
+        signUp.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target); // Use FormData to handle file uploads
+
+          fetch(`${API_URL}/v1/account`, {
+              method: 'POST',
+              headers: {
+                  apikey: 'jenather',
+                  // No need to set 'content-type', as it will be set automatically for FormData
+              },
+              body: formData, // Directly send formData which includes the file
+          })
+            .then(data => data.json())
+            .then(data => {
+                root.innerHTML = '';
+                showLogin(); // Redirect to login or other logic after successful signup
+            })
+            .catch(err => console.log(err));
+        });
+      }
+      
+
+      function showLogin() {
+        root.innerHTML = `
+          <form id="login" action="#" method="post">
+            <label for="username">Username</label>
+            <input type="text" name="username" value="" id="username">
+            <label for="password">Password</label>
+            <input type="password" name="password" value="" id="password">
+            <button type="submit">Login</button>
+            <button id="signup">SignUp</button>
+          </form>
+        `;
+        const signUpForm = document.getElementById('signup');
+        signUpForm.addEventListener('click', () => {
+            createAccount();
+        })
+        const loginForm = document.getElementById("login");
+
+        loginForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+
+          const formData = new FormData(e.target);
+          const payload = JSON.stringify(Object.fromEntries(formData));
+
+          fetch(`${API_URL}/v1/account/login`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              apikey: 'jenather',
+            },
+            body: payload,
+          })
+            .then(data => data.json())
+            .then(data => {
+              localStorage.setItem('token', data?.data?.token);
+              root.innerHTML = '';
+              loadProfile();
+            })
+            .catch(err => console.log(err));
+        });
+      };
+
+      function loadProfile() {
+        fetch(`${API_URL}/v1/account`, {
+          headers: {
+            'accept': 'application/json',
+            apikey: 'jenather',
+            token: localStorage.getItem('token'),
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data?.success) {
+              root.innerHTML = `<h1>Welcome back ${data?.data?.username}</h1>
+                                <button id="threads">Create threads</button>`;
+              const createThread = document.getElementById('threads')
+              createThread.addEventListener('click', () => {
+                createThreads()
+              })
+            } else {
+              localStorage.removeItem('token');
+              showLogin();
+            }
+          })
+          .catch(err => {
+            localStorage.removeItem('token');
+            showLogin();
+          });
+      };
+
+      (() => {
+        if (localStorage.getItem('token')) {
+          loadProfile();
+        } else {
+          showLogin();
+        }
+      })();
+
+      function createThreads(){
+        root.innerHTML = `<form id="threads" action="#" method="post">
+                            <label for="content">content</label>
+                            <input type="text" name="content" value="" id="content">
+                            <button type="submit">Create threads</button>
+                          </form>`
+        const threads = document.getElementById('threads');
+        threads.addEventListener('submit', (e)=> {
+          e.preventDefault()
+
+          const formData = new FormData(e.target);
+          const payload = JSON.stringify(Object.fromEntries(formData));
+
+          fetch(`${API_URL}/v1/threads`, {
+                method: 'POST',
+                headers: {
+                'content-type': 'application/json',
+                apikey: 'jenather',
+                token: localStorage.getItem('token')
+                },
+                body: payload,
+            })
+              .then(data => data.json())
+              .then(data => {
+                  root.innerHTML = ``;
+                  loadThreads()
+                }
+              )
+              .catch(err => {
+                console.log(err)
+              })
+        })
+      }
+
+      function loadThreads(){
+        fetch(`${API_URL}/v1/threads`, {
+          headers: {
+            'accept': 'application/json',
+            apikey: 'jenather',
+            token: localStorage.getItem('token'),
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data?.success){
+              console.log(data.data.result)
+              root.innerHTML=''
+              data.data.result.forEach(data => {
+                root.innerHTML += `<h1>${data?.username}</h1>
+                                <p>${data?.content}</p>`
+
+              });
+            }
+          })
+      }
+    </script>
+  </body>
+</html>
